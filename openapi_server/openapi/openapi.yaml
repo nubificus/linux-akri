@@ -1,0 +1,130 @@
+openapi: 3.0.3
+info:
+  description: A generic OpenAPI specification for managing and interacting with IoT
+    devices.
+  title: Generic IoT Device API
+  version: 1.0.0
+servers:
+- description: Replace with the actual IP of the device.
+  url: "http://{device-ip}"
+  variables:
+    device-ip:
+      default: 127.0.0.1
+paths:
+  /info:
+    get:
+      description: Retrieve static information about the IoT device.
+      operationId: info_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceInfo'
+          description: Device info retrieved successfully
+      summary: Get device information
+      x-openapi-router-controller: openapi_server.controllers.default_controller
+  /onboard:
+    get:
+      description: Obtain the device’s attestation certificate in PEM format.
+      operationId: onboard_get
+      responses:
+        "200":
+          content:
+            application/x-pem-file:
+              schema:
+                format: binary
+                type: string
+          description: Certificate in PEM format
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Certificate retrieval error
+      summary: Retrieve attestation certificate
+      x-openapi-router-controller: openapi_server.controllers.default_controller
+  /update:
+    post:
+      description: Initiates an Over-the-Air update using the provided image and optional
+        arguments.
+      operationId: update_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRequest'
+        required: true
+      responses:
+        "200":
+          description: Update initiated
+        "400":
+          description: Invalid update request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Update process failed
+      summary: Start OTA firmware update
+      x-openapi-router-controller: openapi_server.controllers.default_controller
+components:
+  schemas:
+    DeviceInfo:
+      example:
+        application: example-app
+        device: generic-iot-device
+        version: 1.0.0
+      properties:
+        device:
+          example: generic-iot-device
+          title: device
+          type: string
+        application:
+          example: example-app
+          title: application
+          type: string
+        version:
+          example: 1.0.0
+          title: version
+          type: string
+      title: DeviceInfo
+      type: object
+    UpdateRequest:
+      example:
+        args:
+        - --ip
+        - 192.168.1.100
+        docker_image: example-updater:latest
+      properties:
+        docker_image:
+          example: example-updater:latest
+          title: docker_image
+          type: string
+        args:
+          example:
+          - --ip
+          - 192.168.1.100
+          items:
+            type: string
+          title: args
+          type: array
+      required:
+      - docker_image
+      title: UpdateRequest
+      type: object
+    Error:
+      example:
+        details: Stack trace or detailed error info
+        error: Internal error
+      properties:
+        error:
+          example: Internal error
+          title: error
+          type: string
+        details:
+          example: Stack trace or detailed error info
+          title: details
+          type: string
+      title: Error
+      type: object
