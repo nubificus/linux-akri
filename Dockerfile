@@ -5,7 +5,9 @@ WORKDIR /usr/src/app
 
 COPY requirements.txt /usr/src/app/
 
+RUN apk update && apk add gcc musl-dev linux-headers
 RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install psutil
 
 COPY . /usr/src/app
 

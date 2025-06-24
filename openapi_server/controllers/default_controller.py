@@ -82,4 +82,34 @@ def update_post(body):  # noqa: E501
     update_request = body
     if connexion.request.is_json:
         update_request = UpdateRequest.from_dict(connexion.request.get_json())  # noqa: E501
-    return 'do some magic!'
+        img = update_request.docker_image
+        print("Docker image to use: ", img)
+
+        name = "workload"
+        try:
+            inspect = subprocess.run(
+                ["docker", "inspect", "-f", "{{.State.Running}}", name],
+                capture_output=True,
+                text=True
+            )
+            if inspect.returncode != 0:
+                print("Container `workload` does not exist, continue")
+            else:
+                if inspect.stdout.strip() == "true":
+                    print("The container runs, killing it..")
+                    subprocess.run(["docker", "kill", name], check=True)
+
+                print("Deleting the container..")
+                subprocess.run(["docker", "container", "rm", name], check=True)
+
+        except Exception:
+            pass
+
+        subprocess.Popen(
+            ["docker", "run", "--name", name, img],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True
+        )
+        return 'Container was initiated with the provided image!'
