@@ -10,27 +10,36 @@ from openapi_server.models.error import Error  # noqa: E501
 from openapi_server.models.update_request import UpdateRequest  # noqa: E501
 from openapi_server import util
 
-
 import uuid
 
-
 import psutil
+import socket
 
-def get_mac_from_interface(interface_name):
-    addrs = psutil.net_if_addrs()
-    if interface_name not in addrs:
-        raise ValueError(f"Interface '{interface_name}' not found")
+_cached_mac_address = None
 
-    for addr in addrs[interface_name]:
-        if addr.family == psutil.AF_LINK:
-            return addr.address
+def get_primary_mac_address():
+    global _cached_mac_address
+    if _cached_mac_address is not None:
+        return _cached_mac_address
 
-    raise RuntimeError(f"MAC address not found for interface '{interface_name}'")
+    try:
+        # Create a dummy socket to infer the default IP/interface
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(('8.8.8.8', 80))
+            local_ip = s.getsockname()[0]
 
-def get_mac_address():
-    mac = uuid.getnode()
-    return ':'.join(f'{(mac >> i) & 0xff:02x}' for i in range(40, -1, -8))
+        for iface_name, iface_addrs in psutil.net_if_addrs().items():
+            for addr in iface_addrs:
+                if addr.family == socket.AF_INET and addr.address == local_ip:
+                    # Find MAC address on the same interface
+                    for a in iface_addrs:
+                        if a.family == psutil.AF_LINK:
+                            _cached_mac_address = a.address
+                            return _cached_mac_address
 
+        raise RuntimeError("Could not determine MAC address for active interface.")
+    except Exception as e:
+        raise RuntimeError(f"Failed to get MAC address: {e}")
 
 def info_get():  # noqa: E501
     """Get device information
@@ -50,7 +59,8 @@ def info_get():  # noqa: E501
 def onboard_get() -> Union[Response, Tuple[Response, int], Tuple[Response, int, Dict[str, str]]]:
     try:
         # Run your external C binary that generates a PEM certificate
-        macaddr = get_mac_from_interface("eth0")
+        macaddr = get_primary_mac_address()
+        print(macaddr)
         result = subprocess.run(
             ["./bin/gen_cert", macaddr, "--pem"],
             check=True,
