@@ -52,7 +52,7 @@ def onboard_get() -> Union[Response, Tuple[Response, int], Tuple[Response, int, 
         # Run your external C binary that generates a PEM certificate
         macaddr = get_mac_from_interface("eth0")
         result = subprocess.run(
-            ["./gen_cert", macaddr],  # Replace with full path if needed
+            ["./gen_cert", macaddr, "--pem"],  # Replace with full path if needed
             check=True,
             capture_output=True,
             text=False,
