@@ -41,7 +41,7 @@ def main():
                 pythonic_params=True)
 
     on_startup()
-    app.run(port=8080)
+    app.run(port=80)
 
 
 if __name__ == '__main__':

@@ -9,6 +9,9 @@ from openapi_server.models.device_info import DeviceInfo  # noqa: E501
 from openapi_server.models.error import Error  # noqa: E501
 from openapi_server.models.update_request import UpdateRequest  # noqa: E501
 from openapi_server import util
+from openapi_server.config import settings
+
+
 
 import uuid
 
@@ -73,7 +76,8 @@ def gen_att_cert():
         macaddr = get_primary_mac_address()
         print(macaddr)
         result = subprocess.run(
-            ["./bin/gen_cert", macaddr, "--pem"],
+            #["./bin/gen_cert", macaddr, "--pem"],
+            ["./bin/gen_cert", macaddr],
             check=True,
             capture_output=True,
             text=False,
@@ -92,10 +96,15 @@ def info_get():  # noqa: E501
 
     :rtype: Union[DeviceInfo, Tuple[DeviceInfo, int], Tuple[DeviceInfo, int, Dict[str, str]]
     """
+    print(f"Device: {settings.device}")
+    print(f"Application: {settings.application}")
+    print(f"Version: {settings.version}")
+    print(f"Certificate Path: {settings.server_crt_path}")
+    # Use settings.server_crt_path wherever you need the certificate
     return {
-        "device": "rpi5-5",
-        "application": "generic",
-        "version": "0.0.10"
+        "device": settings.device,
+        "application": settings.application,
+        "version": settings.version,
     }
 
 
@@ -129,6 +138,7 @@ def update_post(body):  # noqa: E501
             args = update_request.args
             if args != None and "--ip" in args:
                 ip_index = args.index("--ip")
+                version_index = args.index("version")
                 if ip_index + 1 >= len(args):
                     status = "Invalid --ip argument in end of the argument list"
                     print(status)
@@ -136,9 +146,12 @@ def update_post(body):  # noqa: E501
 
                 ip = args[ip_index + 1]
                 print("Agent IP: ", ip)
+                version = args[version_index + 1]
+                print("Version: ", version)
+                settings.version = version
 
                 port = 4433
-                server_crt_path = "./crt/cert.pem"
+                server_crt_path = settings.server_crt_path
                 att, code = gen_att_cert()
                 if code != 200:
                     error_response = jsonify({
